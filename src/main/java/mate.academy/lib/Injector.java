@@ -2,7 +2,6 @@ package mate.academy.lib;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.util.HashMap;
 import java.util.Map;
 import mate.academy.service.FileReaderService;
 import mate.academy.service.ProductParser;
@@ -39,7 +38,7 @@ public class Injector {
                 field.setAccessible(true);
                 try {
                     field.set(instance, dependency);
-                } catch (IllegalAccessException e) {
+                } catch (ReflectiveOperationException e) {
                     throw new RuntimeException("Unable to inject field " + field.getName(), e);
                 }
             }
@@ -49,7 +48,11 @@ public class Injector {
 
     private Object createNewInstance(Class<?> clazz) {
         if (IMPLEMENTATIONS.containsKey(clazz)) {
-            return IMPLEMENTATIONS.get(clazz);
+            try {
+                return IMPLEMENTATIONS.get(clazz).getDeclaredConstructor().newInstance();
+            } catch (ReflectiveOperationException e) {
+                throw new RuntimeException("Unable to inject field " + clazz.getName(), e);
+            }
         }
         try {
             Constructor<?> constructor = clazz.getDeclaredConstructor();
@@ -60,13 +63,8 @@ public class Injector {
     }
 
     private Class<?> getImplementation(Class<?> interfaceClazz) {
-        Map<Class<?>, Class<?>> implementations = new HashMap<>();
-        implementations.put(FileReaderService.class, FileReaderServiceImpl.class);
-        implementations.put(ProductParser.class, ProductParserImpl.class);
-        implementations.put(ProductService.class, ProductServiceImpl.class);
-        
         if (interfaceClazz.isInterface()) {
-            return implementations.get(interfaceClazz);
+            return IMPLEMENTATIONS.get(interfaceClazz);
         }
         return interfaceClazz;
     }
