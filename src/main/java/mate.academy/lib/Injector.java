@@ -2,7 +2,6 @@ package mate.academy.lib;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 import mate.academy.service.FileReaderService;
@@ -14,7 +13,11 @@ import mate.academy.service.impl.ProductServiceImpl;
 
 public class Injector {
     private static final Injector injector = new Injector();
-    private Map<Class<?>, Object> knownInstances = new HashMap<>();
+    private static final Map<Class<?>, Class<?>> IMPLEMENTATIONS = Map.of(
+            ProductService.class, ProductServiceImpl.class,
+            FileReaderService.class, FileReaderServiceImpl.class,
+            ProductParser.class, ProductParserImpl.class
+    );
 
     public static Injector getInjector() {
         return injector;
@@ -45,18 +48,14 @@ public class Injector {
     }
 
     private Object createNewInstance(Class<?> clazz) {
-        if (knownInstances.containsKey(clazz)) {
-            return knownInstances.get(clazz);
+        if (IMPLEMENTATIONS.containsKey(clazz)) {
+            return IMPLEMENTATIONS.get(clazz);
         }
-        
         try {
-            Constructor<?> constructor = clazz.getConstructor();
-            Object instance = constructor.newInstance();
-            knownInstances.put(clazz, instance);
-            return instance;
-        } catch (NoSuchMethodException | InvocationTargetException 
-                 | InstantiationException | IllegalAccessException e) {
-            throw new RuntimeException("Cannot create instance of " + clazz.getName(), e);
+            Constructor<?> constructor = clazz.getDeclaredConstructor();
+            return constructor.newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException("Can't create instance of class: " + clazz.getName(), e);
         }
     }
 
